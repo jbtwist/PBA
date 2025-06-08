@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-
 type AccountId = String;
 type BlockNumber = u32;
 type Nonce = u32;
