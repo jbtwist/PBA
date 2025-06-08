@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 /// This is the Balances Module.
 /// It is a simple module which keeps track of how much balance each account has in this state
 /// machine.
+#[derive(Debug)]
 pub struct Pallet {
 	// A simple storage mapping from accounts (`String`) to their balances (`u128`).
 	balances: BTreeMap<String, u128>,
@@ -37,12 +38,12 @@ impl Pallet {
 		let caller_balance = self.balance(&caller);
 		let to_balance = self.balance(&to);
 
-		let new_caller_balance =
-			caller_balance.checked_sub(amount).ok_or("Insufficient balance")?;
+		let new_caller_balance = caller_balance.checked_sub(amount).ok_or("Not enough funds.")?;
 		let new_to_balance = to_balance.checked_add(amount).ok_or("Overflow")?;
 
 		self.balances.insert(caller, new_caller_balance);
 		self.balances.insert(to, new_to_balance);
+
 		Ok(())
 	}
 }
@@ -62,14 +63,20 @@ mod tests {
 	#[test]
 	fn transfer_balance() {
 		let mut balances = super::Pallet::new();
+
 		assert_eq!(
-			balances.transfer("alice".to_string(), "bob".to_string(), 100),
-			Err("Insufficient balance")
+			balances.transfer("alice".to_string(), "bob".to_string(), 51),
+			Err("Not enough funds.")
 		);
 
 		balances.set_balance(&"alice".to_string(), 100);
-		assert_eq!(balances.transfer("alice".to_string(), "bob".to_string(), 100), Ok(()));
-		assert_eq!(balances.balance(&"alice".to_string()), 0);
-		assert_eq!(balances.balance(&"bob".to_string()), 100);
+		assert_eq!(balances.transfer("alice".to_string(), "bob".to_string(), 51), Ok(()));
+		assert_eq!(balances.balance(&"alice".to_string()), 49);
+		assert_eq!(balances.balance(&"bob".to_string()), 51);
+
+		assert_eq!(
+			balances.transfer("alice".to_string(), "bob".to_string(), 51),
+			Err("Not enough funds.")
+		);
 	}
 }

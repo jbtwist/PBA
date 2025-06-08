@@ -3,6 +3,8 @@ mod system;
 
 // This is our main Runtime.
 // It accumulates all of the different pallets we want to use.
+/* TODO: Add the derive macro to implement the `Debug` trait for `Runtime`. */
+#[derive(Debug)]
 pub struct Runtime {
 	system: system::Pallet,
 	balances: balances::Pallet,
@@ -16,5 +18,27 @@ impl Runtime {
 }
 
 fn main() {
-	println!("Hello, world!");
+	let mut runtime = Runtime::new();
+	let alice = "alice".to_string();
+	let bob = "bob".to_string();
+	let charlie = "charlie".to_string();
+
+	runtime.balances.set_balance(&alice, 100);
+
+	// start emulating a block
+	runtime.system.inc_block_number();
+	assert_eq!(runtime.system.block_number(), 1);
+
+	// first transaction
+	runtime.system.inc_nonce(&alice);
+	let _res = runtime
+		.balances
+		.transfer(alice.clone(), bob, 30)
+		.map_err(|e| eprintln!("{}", e));
+
+	// second transaction
+	runtime.system.inc_nonce(&alice);
+	let _res = runtime.balances.transfer(alice, charlie, 20).map_err(|e| eprintln!("{}", e));
+
+	println!("{:#?}", runtime);
 }
