@@ -81,6 +81,8 @@ impl crate::support::Dispatch for Runtime {
 		caller: Self::Caller,
 		runtime_call: Self::Call,
 	) -> support::DispatchResult {
+		// This match statement will allow us to correctly route `RuntimeCall`s
+		// to the appropriate pallet level function.
 		match runtime_call {
 			RuntimeCall::BalancesTransfer { to, amount } => {
 				self.balances.transfer(caller, to, amount)?;
@@ -91,6 +93,8 @@ impl crate::support::Dispatch for Runtime {
 }
 
 fn main() {
+	// Create a new instance of the Runtime.
+	// It will instantiate with it all the modules it uses.
 	let mut runtime = Runtime::new();
 	let alice = "alice".to_string();
 	let bob = "bob".to_string();
@@ -98,20 +102,21 @@ fn main() {
 
 	runtime.balances.set_balance(&alice, 100);
 
-	// start emulating a block
-	runtime.system.inc_block_number();
-	assert_eq!(runtime.system.block_number(), 1);
+	let genesis_block = types::Block {
+		header: support::Header { block_number: 1 },
+		extrinsics: vec![
+			support::Extrinsic {
+				caller: alice.clone(),
+				call: RuntimeCall::BalancesTransfer { to: bob, amount: 30 },
+			},
+			support::Extrinsic {
+				caller: alice,
+				call: RuntimeCall::BalancesTransfer { to: charlie, amount: 25 },
+			},
+		],
+	};
+	runtime.execute_block(genesis_block).expect("Invalid block");
 
-	// first transaction
-	runtime.system.inc_nonce(&alice);
-	let _res = runtime
-		.balances
-		.transfer(alice.clone(), bob, 30)
-		.map_err(|e| eprintln!("{}", e));
-
-	// second transaction
-	runtime.system.inc_nonce(&alice);
-	let _res = runtime.balances.transfer(alice, charlie, 20).map_err(|e| eprintln!("{}", e));
-
+	// Simply print the debug format of our runtime state.
 	println!("{:#?}", runtime);
 }
